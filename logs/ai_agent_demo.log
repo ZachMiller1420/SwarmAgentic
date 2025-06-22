@@ -1,0 +1,114 @@
+2025-06-22 10:50:30,766 - __main__ - INFO - AI Agent Demonstration System initialized
+2025-06-22 10:50:30,766 - __main__ - INFO - Starting AI Agent Demonstration System
+2025-06-22 10:50:30,767 - __main__ - INFO - Initializing system components...
+2025-06-22 10:50:30,768 - src.core.bert_engine - INFO - Loading BERT model from bert-base-uncased-mrpc\bert-base-uncased-mrpc\huggingface_Intel_bert-base-uncased-mrpc_v1
+2025-06-22 10:50:32,557 - src.core.bert_engine - INFO - BERT models loaded successfully
+2025-06-22 10:50:34,704 - src.monitoring.quality_metrics - INFO - Started quality metrics monitoring
+2025-06-22 10:50:34,705 - __main__ - INFO - All components initialized successfully
+2025-06-22 10:50:34,710 - __main__ - INFO - Launching GUI...
+2025-06-22 10:51:09,181 - src.core.ai_agent - INFO - Thought added: Beginning training on SwarmAgentic academic paper
+2025-06-22 10:51:09,403 - src.core.ai_agent - INFO - Thought added: Loaded paper with 4245 characters
+2025-06-22 10:51:09,409 - src.core.ai_agent - INFO - Thought added: Identified 18 key concepts to learn
+2025-06-22 10:51:09,418 - src.core.ai_agent - INFO - Thought added: Learning concept: SwarmAgentic
+2025-06-22 10:51:11,345 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:11,355 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.58)
+2025-06-22 10:51:11,370 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.91)
+2025-06-22 10:51:12,048 - src.core.ai_agent - INFO - Thought added: Learning concept: Particle Swarm Optimization
+2025-06-22 10:51:13,968 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:13,981 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.47)
+2025-06-22 10:51:14,273 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.81)
+2025-06-22 10:51:14,798 - src.core.ai_agent - INFO - Thought added: Learning concept: Multi-agent Systems
+2025-06-22 10:51:16,708 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:16,731 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.46)
+2025-06-22 10:51:16,768 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.86)
+2025-06-22 10:51:17,343 - src.core.ai_agent - INFO - Thought added: Learning concept: Language-driven Optimization
+2025-06-22 10:51:18,887 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:18,906 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.47)
+2025-06-22 10:51:18,939 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.86)
+2025-06-22 10:51:19,492 - src.core.ai_agent - INFO - Thought added: Learning concept: Agent Generation
+2025-06-22 10:51:21,313 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:21,333 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.52)
+2025-06-22 10:51:21,357 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.94)
+2025-06-22 10:51:21,916 - src.core.ai_agent - INFO - Thought added: Learning concept: Collaboration Workflows
+2025-06-22 10:51:23,685 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:23,692 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.63)
+2025-06-22 10:51:23,699 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.83)
+2025-06-22 10:51:24,323 - src.core.ai_agent - INFO - Thought added: Learning concept: PSO Iterations
+2025-06-22 10:51:26,338 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:26,344 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.46)
+2025-06-22 10:51:26,352 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.85)
+2025-06-22 10:51:26,859 - src.core.ai_agent - INFO - Thought added: Learning concept: LLM-guided Transformations
+2025-06-22 10:51:28,621 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:28,629 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.47)
+2025-06-22 10:51:28,635 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.82)
+2025-06-22 10:51:29,317 - src.core.ai_agent - INFO - Thought added: Learning concept: Automated Design
+2025-06-22 10:51:30,669 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:30,675 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.46)
+2025-06-22 10:51:30,682 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.90)
+2025-06-22 10:51:31,343 - src.core.ai_agent - INFO - Thought added: Learning concept: Self-Optimizing Agents
+2025-06-22 10:51:33,445 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:33,470 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.51)
+2025-06-22 10:51:33,477 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.92)
+2025-06-22 10:51:33,997 - src.core.ai_agent - INFO - Thought added: Learning concept: From-Scratch Generation
+2025-06-22 10:51:35,546 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:35,552 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.48)
+2025-06-22 10:51:35,559 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.80)
+2025-06-22 10:51:36,076 - src.core.ai_agent - INFO - Thought added: Learning concept: Performance Feedback
+2025-06-22 10:51:37,713 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:37,720 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.50)
+2025-06-22 10:51:37,726 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.80)
+2025-06-22 10:51:38,480 - src.core.ai_agent - INFO - Thought added: Learning concept: Failure-Aware Updates
+2025-06-22 10:51:39,863 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:39,870 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.63)
+2025-06-22 10:51:39,888 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.83)
+2025-06-22 10:51:40,502 - src.core.ai_agent - INFO - Thought added: Learning concept: Text-based PSO
+2025-06-22 10:51:42,006 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:42,013 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.44)
+2025-06-22 10:51:42,019 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.91)
+2025-06-22 10:51:42,541 - src.core.ai_agent - INFO - Thought added: Learning concept: Agent Synthesis
+2025-06-22 10:51:44,206 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:44,213 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.54)
+2025-06-22 10:51:44,219 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.80)
+2025-06-22 10:51:44,738 - src.core.ai_agent - INFO - Thought added: Learning concept: Workflow Optimization
+2025-06-22 10:51:46,431 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:46,438 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.52)
+2025-06-22 10:51:46,444 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.77)
+2025-06-22 10:51:46,959 - src.core.ai_agent - INFO - Thought added: Learning concept: Cross-model Transfer
+2025-06-22 10:51:48,945 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:48,951 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.47)
+2025-06-22 10:51:48,957 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.85)
+2025-06-22 10:51:49,493 - src.core.ai_agent - INFO - Thought added: Learning concept: Autonomous Systems
+2025-06-22 10:51:51,306 - src.core.ai_agent - INFO - Thought added: Reasoning step 1: Deep semantic understanding and text parsing (confidence: 0.00)
+2025-06-22 10:51:51,314 - src.core.ai_agent - INFO - Thought added: Reasoning step 2: Contextual analysis and knowledge integration (confidence: 0.57)
+2025-06-22 10:51:51,334 - src.core.ai_agent - INFO - Thought added: Reasoning step 3: Logical inference and conclusion generation (confidence: 0.79)
+2025-06-22 10:51:51,844 - src.core.ai_agent - INFO - Thought added: Validating learned concepts
+2025-06-22 10:51:51,849 - src.core.ai_agent - INFO - Thought added: Validation score: 0.86
+2025-06-22 10:51:51,856 - src.core.ai_agent - INFO - Thought added: Training completed successfully
+2025-06-22 10:52:04,492 - src.core.ai_agent - INFO - Thought added: Starting interactive demonstration
+2025-06-22 10:52:04,552 - src.core.ai_agent - INFO - Thought added: Demonstrating understanding of: Explain the core principles of SwarmAgentic
+2025-06-22 10:52:06,462 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Deep semantic understanding and text parsing -> Processing...
+2025-06-22 10:52:06,468 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Contextual analysis and knowledge integration -> Processing...
+2025-06-22 10:52:06,474 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Logical inference and conclusion generation -> Based on the analysis, the conclusion is well-supported.
+2025-06-22 10:52:06,480 - src.core.ai_agent - INFO - Thought added: Generated response: Based on my understanding of SwarmAgentic, Agent Synthesis, I can provide insights into Explain the ...
+2025-06-22 10:52:07,494 - src.core.ai_agent - INFO - Thought added: Demonstrating understanding of: Describe the PSO-based optimization approach
+2025-06-22 10:52:08,970 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Deep semantic understanding and text parsing -> Processing...
+2025-06-22 10:52:08,988 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Contextual analysis and knowledge integration -> Processing...
+2025-06-22 10:52:08,994 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Logical inference and conclusion generation -> Based on the analysis, the conclusion is well-supported.
+2025-06-22 10:52:09,001 - src.core.ai_agent - INFO - Thought added: Generated response: Based on my understanding of Particle Swarm Optimization, Language-driven Optimization, Agent Synthe...
+2025-06-22 10:52:10,024 - src.core.ai_agent - INFO - Thought added: Demonstrating understanding of: Analyze the experimental results and their significance
+2025-06-22 10:52:11,640 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Deep semantic understanding and text parsing -> Processing...
+2025-06-22 10:52:11,647 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Contextual analysis and knowledge integration -> Processing...
+2025-06-22 10:52:11,655 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Logical inference and conclusion generation -> Based on the analysis, the conclusion is well-supported.
+2025-06-22 10:52:11,661 - src.core.ai_agent - INFO - Thought added: Generated response: Based on my understanding of Agent Synthesis, I can provide insights into Analyze the experimental r...
+2025-06-22 10:52:12,911 - src.core.ai_agent - INFO - Thought added: Demonstrating understanding of: Discuss the implications for AI system design
+2025-06-22 10:52:14,334 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Deep semantic understanding and text parsing -> Processing...
+2025-06-22 10:52:14,344 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Contextual analysis and knowledge integration -> Processing...
+2025-06-22 10:52:14,350 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Logical inference and conclusion generation -> Based on the analysis, the conclusion is well-supported.
+2025-06-22 10:52:14,358 - src.core.ai_agent - INFO - Thought added: Generated response: Based on my understanding of Multi-agent Systems, LLM-guided Transformations, Automated Design, I ca...
+2025-06-22 10:52:15,374 - src.core.ai_agent - INFO - Thought added: Demonstrating understanding of: Compare SwarmAgentic with traditional multi-agent systems
+2025-06-22 10:52:16,939 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Deep semantic understanding and text parsing -> Processing...
+2025-06-22 10:52:16,946 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Contextual analysis and knowledge integration -> Processing...
+2025-06-22 10:52:16,954 - src.core.ai_agent - INFO - Thought added: Demo reasoning: Logical inference and conclusion generation -> Based on the analysis, the conclusion is well-supported.
+2025-06-22 10:52:16,962 - src.core.ai_agent - INFO - Thought added: Generated response: Based on my understanding of SwarmAgentic, Multi-agent Systems, Autonomous Systems, I can provide in...
+2025-06-22 10:52:25,711 - src.core.ai_agent - INFO - Thought added: Operation stopped
+2025-06-22 10:52:25,712 - src.core.ai_agent - INFO - Thought added: Agent reset to initial state

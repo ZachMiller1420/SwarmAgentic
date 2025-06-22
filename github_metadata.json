@@ -1,0 +1,21 @@
+{
+  "name": "SwarmAgentic",
+  "description": "PhD-Level AI Agent with Real-Time Animated SwarmAgentic Visualizations",
+  "topics": [
+    "artificial-intelligence",
+    "swarm-intelligence",
+    "particle-swarm-optimization",
+    "bert",
+    "machine-learning",
+    "visualization",
+    "animation",
+    "multi-agent-systems",
+    "python",
+    "ai-research",
+    "educational-tool",
+    "real-time",
+    "interactive-demo"
+  ],
+  "homepage": "https://github.com/ai-in-pm/SwarmAgentic",
+  "license": "MIT"
+}
