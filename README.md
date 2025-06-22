@@ -1,4 +1,5 @@
 # SwarmAgentic AI Agent Demonstration System
+![swarmagentic](https://github.com/user-attachments/assets/70c6ee47-b2c3-4589-83f6-165ead8a49a5)
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
