@@ -14,6 +14,9 @@ A comprehensive AI Agent demonstration system featuring **real-time animated vis
 
 ## 🎬 Live Demo
 
+https://github.com/user-attachments/assets/8ec464dc-fde4-427c-a6c1-0ba299793d46
+
+
 Experience SwarmAgentic in action with our **real-time animated demonstrations**:
 
 - **🔄 Swarm Formation**: Watch agents self-organize using flocking algorithms
