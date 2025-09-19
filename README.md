@@ -198,6 +198,80 @@ python test_animated_demo.py
 
 #### 7. Text PSO Synthesis (rule-based, new) (`src/synthesis/`)
 - Minimal PSO loop that evolves agent-system specs (roles + workflow) without external LLMs
+
+## How PSO Works in This Project (End‑to‑End)
+
+This section explains the complete PSO workflow and how the system learns, selects tasks, searches for teams, scores them, and optionally uses an LLM for suggestions.
+
+### 1) Training (Domain Understanding)
+- The agent loads a domain corpus with this priority:
+  1. `TRAINING_TEXT_PATH` (env)
+  2. `data/agent_ops_handbook.txt`
+  3. `academic_summary.md`
+- Using `BERTReasoningEngine` and `AdaptiveLearningSystem`, it mines and validates concepts, builds a knowledge graph in memory, and exports it for the UI.
+- The entire corpus is cached to `data/_training_corpus.txt`, enabling the evaluator to extract domain keywords for a “domain_coverage” bonus (see the fitness function below).
+- The system also derives “recommended concepts” that can seed PSO tasks (preset: “From Training”).
+
+### 2) Task Selection (What Teams Should Cover)
+- Task sets live in `data/tasks.json` (e.g., General, Software Delivery, Research). Select via UI or API `/api/tasks/select`.
+- Options: Default (built‑in), From Training, or named categories / explicit lists.
+- The UI shows a task‑focused concept list so “Learned Concepts” match your selection (using the knowledge graph export when available).
+
+### 3) Text‑Based PSO (Team Synthesis)
+- A team is plain text with:
+  - `roles`: list of `{name, responsibilities[], tools[]}`
+  - `workflow`: list of step strings
+- The engine (`PSOSwarmSynthesizer`) initializes a diverse population, then iteratively mutates candidates and updates personal/global bests. Diversity features include:
+  - Unique initial signatures (sorted role names + workflow)
+  - Duplicate checks when inserting children
+  - Expanded role/workflow pools to improve keyword coverage in domain categories
+- Streaming: each iteration streams population metrics, Top‑K, and the current global best. The UI plots coverage (X) and fitness (Y).
+
+### 4) Fitness Function (Scoring Teams)
+Implemented in `src/synthesis/eval.py` and matches this weighted sum:
+
+```
+coverage        = (# matched task keywords) / (# total keywords)
+size_bonus      = 1.0 if 3 ≤ #roles ≤ 6 else 0.7
+verify_bonus    = 0.15 if any workflow step contains "verify"|"check"|"audit" else 0.0
+redundancy_pen. = 0.2 if duplicate role names exist else 0.0
+wf_penalty      = 0.4 if workflow length == 0
+                = 0.2 if workflow length > 10
+                = 0.0 otherwise
+domain_coverage = match against domain keywords (optional, from training cache)
+w                = PSO_DOMAIN_WEIGHT (e.g., 0.2)
+
+fitness = clamp(0, 1, 0.5*coverage + 0.2*size_bonus + verify_bonus + w*domain_coverage
+                      - redundancy_penalty - wf_penalty)
+```
+
+Notes:
+- The evaluator scans role names, responsibilities, and workflow text to compute coverage.
+- If the training cache is present, domain_coverage provides an additional, tunable bonus.
+
+### 5) Optional LLM Suggestions
+- Operators in `src/synthesis/llm_ops.py`:
+  - `llm_mutate_system` — 1 improved candidate
+  - `llm_mutate_batch` — multiple candidates in one call
+- Controls via env vars:
+  - `USE_LLM_PSO`, `LLM_PSO_PROB`, `LLM_PSO_MAX_CALLS_PER_ITER`, `LLM_PSO_GBEST_ONLY`, `LLM_PSO_BATCH`, `LLM_PSO_BATCH_COUNT`, `OPENAI_MODEL`
+- Circuit breaker & backoff protect against rate limits. All LLM proposals are sanitized for duplicate role names before evaluation.
+
+### Tuning Knobs (UI & Env)
+- UI controls (“Viz Controls”):
+  - Iteration Pause (s) — updates backend `TEXT_PSO_PAUSE`
+  - Reveal ms, Spread, Dot px — visual presentation
+- Backend env:
+  - `TEXT_PSO_PAUSE`, `TEXT_PSO_POP`, `TEXT_PSO_ITERS`
+  - `BERT_MODEL_ID`, `TRAINING_TEXT_PATH`, `PSO_DOMAIN_WEIGHT`, `OPENAI_API_KEY`
+
+### Files to Check
+- Agent + streaming: `src/core/ai_agent.py`
+- Evaluator: `src/synthesis/eval.py`
+- PSO core: `src/synthesis/pso_text.py`
+- LLM ops: `src/synthesis/llm_ops.py`
+- Frontend: `frontend/src/App.jsx`, `frontend/src/api.js`
+
 - Files:
   - `src/synthesis/agent_spec.py`: schema for roles and workflow
   - `src/synthesis/eval.py`: heuristic fitness (coverage, verification, balance)
