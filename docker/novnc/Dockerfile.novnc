@@ -1,0 +1,43 @@
+FROM ubuntu:22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       ca-certificates curl git \
+       python3 python3-pip python3-venv python3-tk python3-pyqt5 \
+       xvfb x11vnc fluxbox websockify novnc \
+       libgl1 libglib2.0-0 graphviz \
+       libx11-6 libxext6 libxrender1 libxkbcommon-x11-0 \
+       libxcb1 libxcb-render0 libxcb-shape0 libxcb-xfixes0 \
+       libxcomposite1 libxi6 libxtst6 libnss3 libasound2 libxrandr2 libxss1 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    HF_HOME=/cache/huggingface \
+    DISPLAY=:99
+
+WORKDIR /app
+
+# Leverage layer caching
+COPY requirements.txt ./
+RUN python3 -m pip install --upgrade pip \
+    && python3 -m pip install --no-cache-dir \
+       --extra-index-url https://download.pytorch.org/whl/cpu \
+       -r requirements.txt
+
+# Copy project
+COPY . .
+
+# Startup script
+COPY docker/novnc/start.sh /opt/start.sh
+RUN chmod +x /opt/start.sh
+
+VOLUME ["/cache/huggingface", "/app/results", "/app/logs"]
+
+# noVNC via websockify on 8080
+EXPOSE 8080
+
+ENTRYPOINT ["/opt/start.sh"]
+

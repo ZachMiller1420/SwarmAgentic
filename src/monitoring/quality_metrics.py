@@ -410,6 +410,15 @@ class RealTimeMetricsCollector:
                 try:
                     # Simulate some metric updates (in real implementation, these would come from actual measurements)
                     self._simulate_metric_updates()
+                    # Notify any registered update callbacks (e.g., WebSocket streamer)
+                    try:
+                        for cb in list(self.update_callbacks):
+                            try:
+                                cb()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
                     time.sleep(update_interval)
                 except Exception as e:
                     self.logger.error(f"Monitoring error: {e}")

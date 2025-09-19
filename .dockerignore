@@ -1,0 +1,45 @@
+# Git and VCS
+.git
+.gitignore
+
+# Caches (prevent large/unusual modes in context)
+.cache/
+**/.cache/
+
+# Python caches
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+ai_agent_env/
+**/ai_agent_env/
+SwarmAgentic-CSCI544/ai_agent_env/
+SwarmAgentic-CSCI544/.venv/
+
+# Local artifacts and large files
+build/
+dist/
+results/
+logs/
+SwarmAgentic-CSCI544/results/
+SwarmAgentic-CSCI544/logs/
+SwarmAgentic-CSCI544/*.mp4
+SwarmAgentic-CSCI544/*.pdf
+*.mp4
+*.pdf
+
+# Secrets
+OpenAI-APIkey.txt
+SwarmAgentic-CSCI544/OpenAI-APIkey.txt
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

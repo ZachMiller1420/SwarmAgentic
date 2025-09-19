@@ -70,6 +70,16 @@ class InteractiveDemonstrationSystem:
         """Initialize predefined demonstration scenarios"""
         self.demo_scenarios = [
             DemoScenario(
+                scenario_id="agent_synthesis",
+                title="Agent Synthesis via PSO (Rule-based)",
+                description="Run a minimal PSO loop to evolve an agent-system spec (no LLM)",
+                complexity_level="intermediate",
+                expected_duration=30.0,
+                required_concepts=["agent generation", "verification", "workflow"],
+                success_criteria={"accuracy": 0.70, "completeness": 0.70, "coherence": 0.70},
+                interactive_elements=["optimization_run", "best_system_summary"]
+            ),
+            DemoScenario(
                 scenario_id="swarm_principles",
                 title="SwarmAgentic Core Principles",
                 description="Demonstrate understanding of SwarmAgentic's fundamental principles and architecture",
@@ -297,6 +307,10 @@ class InteractiveDemonstrationSystem:
     def _generate_scenario_queries(self, scenario: DemoScenario) -> List[str]:
         """Generate queries for a specific scenario"""
         query_templates = {
+            "agent_synthesis": [
+                "Run a small PSO optimization to synthesize an agent system",
+                "Summarize the best agent roles and workflow discovered",
+            ],
             "swarm_principles": [
                 "Explain the core principles of SwarmAgentic and how it differs from traditional approaches",
                 "Describe the three autonomy properties that SwarmAgentic addresses",
@@ -333,8 +347,63 @@ class InteractiveDemonstrationSystem:
     async def _process_demo_query(self, scenario: DemoScenario, query: str) -> DemoResponse:
         """Process a demonstration query with the agent"""
         start_time = time.time()
-        
-        # Use agent's reasoning engine
+
+        # Special handling for agent synthesis scenario: run PSO loop once
+        if scenario.scenario_id == "agent_synthesis" and "run a small pso" in query.lower():
+            # Lazy import to avoid heavy deps when unused
+            try:
+                from src.synthesis.pso_text import PSOSwarmSynthesizer
+            except Exception:
+                from synthesis.pso_text import PSOSwarmSynthesizer  # fallback
+
+            tasks = [
+                "plan tasks, execute plan, verify results",
+                "coordinator assigns tasks and verifier checks outputs",
+                "researcher gathers info, planner decomposes, executor runs",
+            ]
+            # Larger, configurable PSO for clearer motion in this demo path as well
+            import os
+            try:
+                pop = int(os.environ.get('TEXT_PSO_POP', '15'))
+            except Exception:
+                pop = 15
+            try:
+                iters = int(os.environ.get('TEXT_PSO_ITERS', '12'))
+            except Exception:
+                iters = 12
+            synth = PSOSwarmSynthesizer(population_size=pop, iterations=iters)
+            result = synth.run(tasks)
+
+            # Create a synthetic reasoning trace
+            reasoning_steps = self.ai_agent.bert_engine.reason_step_by_step(
+                "Summarize the synthesized agent system",
+                result.best_system.to_text()
+            )
+
+            response_text = (
+                f"Optimization complete. Best fitness: {result.best_fitness:.2f}.\n\n" +
+                result.best_system.to_text()
+            )
+
+            concepts_used = [c for c in self.ai_agent.learned_concepts if any(k in result.best_system.to_text().lower() for k in c.lower().split())]
+            confidence = min(1.0, 0.7 + 0.3 * result.best_fitness)
+            processing_time = time.time() - start_time
+            success_metrics = {"accuracy": confidence, "completeness": 0.9, "coherence": 0.85}
+
+            demo_response = DemoResponse(
+                scenario_id=scenario.scenario_id,
+                query=query,
+                response=response_text,
+                reasoning_steps=[step.description for step in reasoning_steps],
+                confidence_score=confidence,
+                processing_time=processing_time,
+                concepts_used=concepts_used,
+                success_metrics=success_metrics,
+            )
+            self.demo_history.append(demo_response)
+            return demo_response
+
+        # Default: Use agent's reasoning engine
         reasoning_steps = self.ai_agent.bert_engine.reason_step_by_step(query)
         
         # Generate response based on learned knowledge

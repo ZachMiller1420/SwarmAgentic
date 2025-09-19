@@ -1,0 +1,74 @@
+﻿# Python bytecode and caches
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+.env.local
+.venv.local
+
+# Project-specific envs
+SwarmAgentic-CSCI544/ai_agent_env/
+SwarmAgentic-CSCI544/.venv/
+SwarmAgentic-CSCI544/venv/
+SwarmAgentic-CSCI544/env/
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+.eggs/
+ wheels/
+
+# Test, coverage, tooling
+.pytest_cache/
+.mypy_cache/
+.tox/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Editors/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+# Local caches, environments, and outputs
+.cache/
+ai_agent_env/
+.venv/
+__pycache__/
+results/
+logs/
+
+# Frontend build artifacts
+frontend/dist/
+frontend/node_modules/
+
+# Model artifacts and large weights
+*.safetensors
+*.pt
+*.bin
+*.ckpt
+
+# Secrets
+OpenAI-APIkey.txt
+.env
+.env.local
+
+# OS/IDE junk
+.DS_Store
+.idea/
+.vscode/

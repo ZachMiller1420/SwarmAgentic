@@ -1,0 +1,138 @@
+        for step in reasoning_steps:
+            self.add_thought(
+                f"Demo reasoning: {step.description} -> {step.intermediate_results.get('final_answer', 'Processing...')}",
+                "demo_reasoning"
+            )
+        
+        # Generate response based on learned knowledge
+        response = self._generate_response(query)
+        self.add_thought(f"Generated response: {response[:100]}...", "response_generation")
+    
+    def _generate_response(self, query: str) -> str:
+        """Generate a response based on learned knowledge"""
+        # Simplified response generation
+        relevant_concepts = [concept for concept in self.learned_concepts 
+                           if any(word in concept.lower() for word in query.lower().split())]
+        
+        if relevant_concepts:
+            return f"Based on my understanding of {', '.join(relevant_concepts[:3])}, " \
+                   f"I can provide insights into {query}. The key aspects involve..."
+        else:
+            return f"While analyzing '{query}', I draw upon my comprehensive understanding " \
+                   f"of the SwarmAgentic framework to provide relevant insights..."
+    
+    def pause(self):
+        """Pause current operation"""
+        self.state.is_paused = True
+        self.add_thought("Operation paused", "control")
+        self._notify_callbacks('state_change', asdict(self.state))
+    
+    def resume(self):
+        """Resume paused operation"""
+        self.state.is_paused = False
+        self.add_thought("Operation resumed", "control")
+        self._notify_callbacks('state_change', asdict(self.state))
+    
+    def stop(self):
+        """Stop current operation"""
+        self.state.is_training = False
+        self.state.is_demonstrating = False
+        self.state.is_paused = False
+        self.state.current_task = "stopped"
+        self.add_thought("Operation stopped", "control")
+        self._notify_callbacks('state_change', asdict(self.state))
+    
+    def reset(self):
+        """Reset agent to initial state"""
+        self.stop()
+        self.knowledge_base.clear()
+        self.learned_concepts.clear()
+        self.scratchpad.clear()
+        self.thought_process.clear()
+        self.working_memory.clear()
+
+        self.state = AgentState()
+        self.learning_progress = LearningProgress()
+
+        self.add_thought("Agent reset to initial state", "control")
+        self._notify_callbacks('state_change', asdict(self.state))
+    
+    async def _wait_for_resume(self):
+        """Wait for resume signal when paused"""
+        while self.state.is_paused:
+            await asyncio.sleep(0.1)
+    
+    def set_training_text(self, text: str):
+        """Set a custom training corpus (overrides file loading)."""
+        self.custom_training_text = text or ""
+
+    def set_pso_tasks(self, tasks: Optional[List[str]]):
+        """Set tasks for PSO synthesizer. None clears explicit tasks."""
+        self.pso_tasks = list(tasks) if tasks else None
+
+    def _load_academic_paper(self) -> str:
+        """Load the training corpus: custom text, env override, or default file."""
+        # 1) Highest priority: custom text explicitly set
+        if self.custom_training_text is not None:
+            return self.custom_training_text
+        # 2) Environment override
+        try:
+            import os
+            env_path = os.environ.get('TRAINING_TEXT_PATH')
+            if env_path:
+                p = Path(env_path)
+                if p.exists():
+                    with open(p, 'r', encoding='utf-8') as f:
+                        return f.read()
+                else:
+                    self.logger.warning(f"TRAINING_TEXT_PATH set but not found: {env_path}")
+        except Exception as e:
+            self.logger.error(f"Failed to load TRAINING_TEXT_PATH: {e}")
+        # 3) Fallback to academic_paper_path
+        try:
+            with open(self.academic_paper_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            self.logger.error(f"Failed to load training file: {e}")
+            return ""
+    
+    def _extract_concepts(self, content: str) -> List[str]:
+        """Extract key concepts from the academic paper"""
+        # Simplified concept extraction
+        concepts = [
+            "SwarmAgentic", "Particle Swarm Optimization", "Multi-agent Systems",
+            "Language-driven Optimization", "Agent Generation", "Collaboration Workflows",
+            "PSO Iterations", "LLM-guided Transformations", "Automated Design",
+            "Self-Optimizing Agents", "From-Scratch Generation", "Performance Feedback",
+            "Failure-Aware Updates", "Text-based PSO", "Agent Synthesis",
+            "Workflow Optimization", "Cross-model Transfer", "Autonomous Systems"
+        ]
+        return concepts
+    
+    def get_current_metrics(self) -> Dict[str, Any]:
+        """Get current performance and state metrics"""
+        bert_metrics = self.bert_engine.get_performance_metrics()
+        
+        return {
+            'agent_state': asdict(self.state),
+            'learning_progress': asdict(self.learning_progress),
+            'bert_metrics': bert_metrics,
+            'knowledge_base_size': len(self.knowledge_base),
+            'concepts_learned': len(self.learned_concepts),
+            'scratchpad_entries': len(self.scratchpad),
+            'working_memory_items': len(self.working_memory),
+            'accuracy_trend': self.accuracy_history[-10:] if self.accuracy_history else [],
+            'average_confidence': np.mean(self.confidence_scores) if self.confidence_scores else 0.0
+        }
+    
+    def get_scratchpad_content(self) -> List[str]:
+        """Get current scratchpad content"""
+        return self.scratchpad.copy()
+    
+    def get_thought_process(self) -> List[Dict[str, Any]]:
+        """Get detailed thought process"""
+        return self.thought_process.copy()
+    
+    def get_working_memory(self) -> Dict[str, Any]:
+        """Get current working memory state"""
+        return self.working_memory.copy()

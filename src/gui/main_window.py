@@ -19,6 +19,8 @@ import math
 
 from ..core.ai_agent import PhDLevelAIAgent
 from .swarm_visualization import SwarmVisualization
+from pathlib import Path
+import json
 
 class ModernStyle:
     """Modern UI styling configuration"""
@@ -65,6 +67,8 @@ class AIAgentGUI:
         self.is_demo_enabled = False
         self.update_thread = None
         self.stop_updates = False
+        self.task_sets = {"Default (Built-in)": [], "From Training": []}
+        self._load_task_sets()
         
         # Data for real-time visualization
         self.accuracy_data = []
@@ -167,6 +171,24 @@ class AIAgentGUI:
         )
         
         # Control buttons
+        # Task set selector
+        tk.Label(
+            self.control_frame,
+            text="Task Set:",
+            font=ModernStyle.BODY_FONT,
+            bg=ModernStyle.BACKGROUND_COLOR,
+            fg=ModernStyle.TEXT_COLOR
+        ).grid(row=0, column=0, padx=5, pady=(0,5), sticky=tk.W)
+        self.task_set_var = tk.StringVar(value="Default (Built-in)")
+        self.task_set_combo = ttk.Combobox(
+            self.control_frame,
+            textvariable=self.task_set_var,
+            values=list(self.task_sets.keys()),
+            state="readonly",
+            width=28
+        )
+        self.task_set_combo.grid(row=0, column=1, padx=5, pady=(0,5), sticky=tk.W)
+
         self.start_training_btn = ttk.Button(
             self.control_frame,
             text="Start Training",
@@ -341,6 +363,25 @@ class AIAgentGUI:
             wrap=tk.WORD,
             state=tk.DISABLED
         )
+
+        # Team Explorer panel (Top-K teams per PSO iteration)
+        self.team_explorer_label = tk.Label(
+            self.scratchpad_frame,
+            text="Team Explorer (Top-K per iteration)",
+            font=ModernStyle.HEADER_FONT,
+            bg=ModernStyle.BACKGROUND_COLOR,
+            fg=ModernStyle.PRIMARY_COLOR
+        )
+        self.team_explorer_text = scrolledtext.ScrolledText(
+            self.scratchpad_frame,
+            height=12,
+            width=60,
+            font=ModernStyle.MONO_FONT,
+            bg="white",
+            fg=ModernStyle.TEXT_COLOR,
+            wrap=tk.WORD,
+            state=tk.DISABLED
+        )
     
     def _create_metrics_panel(self):
         """Create performance metrics panel"""
@@ -427,11 +468,11 @@ class AIAgentGUI:
         self.status_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Control buttons layout
-        self.start_training_btn.grid(row=0, column=0, padx=5, pady=5)
-        self.start_demo_btn.grid(row=0, column=1, padx=5, pady=5)
-        self.pause_btn.grid(row=1, column=0, padx=5, pady=5)
-        self.stop_btn.grid(row=1, column=1, padx=5, pady=5)
-        self.reset_btn.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+        self.start_training_btn.grid(row=1, column=0, padx=5, pady=5)
+        self.start_demo_btn.grid(row=1, column=1, padx=5, pady=5)
+        self.pause_btn.grid(row=2, column=0, padx=5, pady=5)
+        self.stop_btn.grid(row=2, column=1, padx=5, pady=5)
+        self.reset_btn.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
         
         # Status layout
         self.status_text.pack(anchor=tk.W, pady=(0, 10))
@@ -454,6 +495,8 @@ class AIAgentGUI:
         self.scratchpad_text.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         self.memory_label.pack(anchor=tk.W)
         self.memory_text.pack(fill=tk.BOTH, expand=True)
+        self.team_explorer_label.pack(anchor=tk.W, pady=(10, 0))
+        self.team_explorer_text.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
         
         # Bottom row: Metrics
         self.metrics_frame.pack(fill=tk.X)
@@ -496,12 +539,20 @@ class AIAgentGUI:
             # Run training in separate thread
             def run_training():
                 if self.agent:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    success = loop.run_until_complete(self.agent.start_training())
-                    if success:
-                        self.root.after(0, self._enable_demo)
-                    self.root.after(0, self._reset_training_button)
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        success = loop.run_until_complete(self.agent.start_training())
+                        if success:
+                            self.root.after(0, self._enable_demo)
+                    except Exception as e:
+                        # Surface errors to the user for quick diagnosis
+                        try:
+                            messagebox.showerror("Training Error", f"An error occurred during training:\n{e}")
+                        except Exception:
+                            pass
+                    finally:
+                        self.root.after(0, self._reset_training_button)
 
             threading.Thread(target=run_training, daemon=True).start()
     
@@ -511,6 +562,22 @@ class AIAgentGUI:
             self.is_demo_enabled = False
             self.start_demo_btn.configure(state="disabled")
 
+            # Determine task set selection
+            try:
+                choice = self.task_set_var.get()
+                if choice and choice in self.task_sets:
+                    tasks = self.task_sets.get(choice) or []
+                    if tasks:
+                        self.agent.set_pso_tasks(tasks)
+                    elif choice == "From Training":
+                        # If From Training selected but training hasn't set tasks, keep current
+                        pass
+                    else:
+                        # Default built-in: clear explicit tasks to fall back
+                        self.agent.set_pso_tasks(None)
+            except Exception:
+                pass
+
             # Update visualization for demo mode
             if self.swarm_viz:
                 self.swarm_viz.update_from_agent_state({'is_demonstrating': True})
@@ -518,10 +585,17 @@ class AIAgentGUI:
             # Run demo in separate thread
             def run_demo():
                 if self.agent:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    loop.run_until_complete(self.agent.start_demonstration())
-                    self.root.after(0, self._reset_demo_button)
+                    try:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+                        loop.run_until_complete(self.agent.start_demonstration())
+                    except Exception as e:
+                        try:
+                            messagebox.showerror("Demo Error", f"An error occurred during the demo:\n{e}")
+                        except Exception:
+                            pass
+                    finally:
+                        self.root.after(0, self._reset_demo_button)
 
             threading.Thread(target=run_demo, daemon=True).start()
     
@@ -584,6 +658,11 @@ class AIAgentGUI:
             
             if 'demonstration_progress' in state_data:
                 self.demo_progress['value'] = state_data['demonstration_progress']
+
+            # If the agent signals text-based PSO mode, switch visualization accordingly
+            # This allows the UI to reflect text_pso immediately when the agent requests it.
+            if self.swarm_viz and state_data.get('text_pso_mode', False):
+                self.swarm_viz.update_from_agent_state({'text_pso_mode': True})
         
         self.root.after(0, update_ui)
     
@@ -597,6 +676,84 @@ class AIAgentGUI:
                 self.training_progress['value'] = progress_value
             elif progress_type == 'demonstration':
                 self.demo_progress['value'] = progress_value
+            elif progress_type == 'synthesis_iteration':
+                # Switch visualization to team builder and push population state
+                if self.swarm_viz:
+                    self.swarm_viz.update_from_agent_state({'team_builder_mode': True})
+                    pop = progress_data.get('population', [])
+                    gbest = progress_data.get('gbest', {})
+                    top_k = progress_data.get('top_k', [])
+                    gbest_spec = progress_data.get('gbest_spec', '')
+                    teams = progress_data.get('teams', [])
+                    gbest_team = progress_data.get('gbest_team', {})
+                    llm_stats = progress_data.get('llm_stats', {})
+                    # Map to expected structure
+                    population_metrics = []
+                    for item in pop:
+                        population_metrics.append({
+                            'coverage': float(item.get('coverage', 0.0)),
+                            'role_count': int(item.get('role_count', 1)),
+                            'workflow_len': int(item.get('workflow_len', 0)),
+                            'fitness': float(item.get('fitness', 0.0)),
+                        })
+                    # Keep text_pso updates optional; focus on team_builder by default
+                    try:
+                        self.swarm_viz.update_text_pso_state(
+                            int(progress_data.get('iteration', 0)),
+                            population_metrics,
+                            {
+                                'coverage': float(gbest.get('coverage', 0.0)),
+                                'workflow_len': int(gbest.get('workflow_len', 0)),
+                                'fitness': float(gbest.get('fitness', 0.0)),
+                            }
+                        )
+                    except Exception:
+                        pass
+
+                    # Also update the Team Builder visualization
+                    try:
+                        self.swarm_viz.update_team_builder_state(
+                            int(progress_data.get('iteration', 0)),
+                            teams,
+                            gbest_team
+                        )
+                    except Exception:
+                        pass
+
+                    # Update Team Explorer with Top-K summaries and best spec
+                    try:
+                        self.team_explorer_text.configure(state=tk.NORMAL)
+                        self.team_explorer_text.delete(1.0, tk.END)
+                        iter_no = int(progress_data.get('iteration', 0))
+                        calls = int(llm_stats.get('calls_total', 0))
+                        acc_iter = int(llm_stats.get('accepts_this_iter', 0))
+                        acc_total = int(llm_stats.get('accepts_total', 0))
+                        noops_total = int(llm_stats.get('noops_total', 0))
+                        header = (
+                            f"Iteration {iter_no} — Top Teams  |  "
+                            f"LLM: calls {calls}, accepted {acc_total}, no-ops {noops_total} (this iter: {acc_iter})\n\n"
+                        )
+                        self.team_explorer_text.insert(tk.END, header)
+                        for i, entry in enumerate(top_k, start=1):
+                            fit = float(entry.get('fitness', 0.0))
+                            cov = float(entry.get('coverage', 0.0))
+                            rc = int(entry.get('role_count', 0))
+                            wl = int(entry.get('workflow_len', 0))
+                            spec = entry.get('spec', '')
+                            self.team_explorer_text.insert(tk.END, f"#{i} Fitness {fit:.2f} | Coverage {cov:.2f} | Roles {rc} | Workflow {wl}\n")
+                            # Print a compact spec (first ~10 lines)
+                            if spec:
+                                lines = spec.split('\n')
+                                preview = '\n'.join(lines[:10])
+                                self.team_explorer_text.insert(tk.END, preview + "\n\n")
+                        if gbest_spec:
+                            self.team_explorer_text.insert(tk.END, "Current Global Best (Spec):\n")
+                            lines = gbest_spec.split('\n')
+                            preview = '\n'.join(lines[:14])
+                            self.team_explorer_text.insert(tk.END, preview + "\n")
+                        self.team_explorer_text.configure(state=tk.DISABLED)
+                    except Exception:
+                        pass
         
         self.root.after(0, update_ui)
     
@@ -629,6 +786,28 @@ class AIAgentGUI:
         
         self.update_thread = threading.Thread(target=update_loop, daemon=True)
         self.update_thread.start()
+
+    def _load_task_sets(self):
+        """Load task sets from data/tasks.json if present."""
+        try:
+            path = Path("data/tasks.json")
+            if path.exists():
+                data = json.loads(path.read_text(encoding="utf-8"))
+                # Accept either list (unnamed) or dict(name->list)
+                if isinstance(data, list):
+                    self.task_sets["Custom Tasks"] = [str(x) for x in data]
+                elif isinstance(data, dict):
+                    for k, v in data.items():
+                        if isinstance(v, list):
+                            self.task_sets[str(k)] = [str(x) for x in v]
+                # Refresh combobox values if already created
+                try:
+                    if hasattr(self, 'task_set_combo'):
+                        self.task_set_combo.configure(values=list(self.task_sets.keys()))
+                except Exception:
+                    pass
+        except Exception:
+            pass
     
     def _update_metrics(self):
         """Update performance metrics display"""

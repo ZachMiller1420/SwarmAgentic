@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SwarmAgentic Web Demo</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 20px; }
+      h1 { margin-bottom: 8px; }
+      .row { display: flex; gap: 12px; margin: 10px 0 20px; }
+      button { padding: 10px 14px; border: 0; border-radius: 6px; cursor: pointer; }
+      .ok { background: #27AE60; color: #fff; }
+      .info { background: #3498DB; color: #fff; }
+      .warn { background: #F39C12; color: #fff; }
+      pre { background: #f6f8fa; padding: 12px; border-radius: 6px; max-height: 60vh; overflow: auto; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <h1>SwarmAgentic Web Demo</h1>
+    <p>Control the agent from your browser. Train first, then start the demo.</p>
+
+    <div class="row">
+      <button class="ok" onclick="post('/api/train')">Start Training</button>
+      <button class="info" onclick="post('/api/demo')">Start Demo</button>
+      <button class="warn" onclick="post('/api/stop_demo')">Stop Demo</button>
+    </div>
+    <div class="row">
+      <button onclick="post('/api/pause')">Pause</button>
+      <button onclick="post('/api/resume')">Resume</button>
+      <button onclick="post('/api/reset')">Reset</button>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div>Training</div>
+        <div style="width:240px; background:#eee; height:12px; border-radius:6px; overflow:hidden">
+          <div id="trainBar" style="width:0%; height:100%; background:#27AE60"></div>
+        </div>
+        <div id="trainPct">0%</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <div>Demo</div>
+        <div style="width:240px; background:#eee; height:12px; border-radius:6px; overflow:hidden">
+          <div id="demoBar" style="width:0%; height:100%; background:#3498DB"></div>
+        </div>
+        <div id="demoPct">0%</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <h3>State</h3>
+        <pre id="state"></pre>
+      </div>
+      <div>
+        <h3>Metrics</h3>
+        <pre id="metrics"></pre>
+      </div>
+    </div>
+
+    <div>
+      <h3>Task Preset</h3>
+      <div class="row">
+        <select id="taskCat"></select>
+        <button class="info" onclick="applyTasks()">Apply Tasks</button>
+        <span id="taskApplied" style="color:#555"></span>
+      </div>
+    </div>
+
+    <div>
+      <h3>PSO Visualization</h3>
+      <svg id="pso" width="520" height="280" style="border:1px solid #ddd; background:#fff"></svg>
+      <div id="psoHint" style="color:#777; margin-top:6px">Waiting for synthesis updates… Start Demo to see motion.</div>
+    </div>
+
+    <div class="grid">
+      <div>
+        <h3>Scratchpad / Thoughts</h3>
+        <pre id="thoughts"></pre>
+      </div>
+      <div>
+        <h3>Working Memory</h3>
+        <pre id="memory"></pre>
+      </div>
+    </div>
+
+    <div>
+      <h3>Live Stream</h3>
+      <pre id="stream"></pre>
+    </div>
+
+    <script>
+      async function post(url) {
+        await fetch(url, { method: 'POST' });
+        await load();
+      }
+      async function load() {
+        const [s, m, th, wm] = await Promise.all([
+          fetch('/api/state').then(r => r.json()),
+          fetch('/api/metrics').then(r => r.json()),
+          fetch('/api/thoughts').then(r => r.json()).catch(()=>[]),
+          fetch('/api/memory').then(r => r.json()).catch(()=>({})),
+        ]);
+        document.getElementById('state').textContent = JSON.stringify(s, null, 2);
+        document.getElementById('metrics').textContent = JSON.stringify(m, null, 2);
+        document.getElementById('thoughts').textContent = (th || []).slice(-50).map(t => `${t.timestamp} [${t.type}] ${t.content}`).join('\n');
+        document.getElementById('memory').textContent = JSON.stringify(wm || {}, null, 2);
+        // progress bars
+        try {
+          const tp = Math.round(s?.agent_state?.training_progress || 0);
+          const dp = Math.round(s?.agent_state?.demonstration_progress || 0);
+          document.getElementById('trainBar').style.width = tp + '%';
+          document.getElementById('demoBar').style.width = dp + '%';
+          document.getElementById('trainPct').textContent = tp + '%';
+          document.getElementById('demoPct').textContent = dp + '%';
+        } catch {}
+      }
+      setInterval(load, 1000);
+      load();
+
+      // Tasks
+      async function loadTasks() {
+        try {
+          const t = await fetch('/api/tasks').then(r => r.json());
+          const sel = document.getElementById('taskCat');
+          sel.innerHTML = '';
+          Object.keys(t.categories || {}).forEach(k => {
+            const opt = document.createElement('option');
+            opt.value = k; opt.textContent = k; sel.appendChild(opt);
+          });
+        } catch {}
+      }
+      async function applyTasks() {
+        const sel = document.getElementById('taskCat');
+        const cat = sel.value;
+        const cats = cat ? [cat] : [];
+        try {
+          const r = await fetch('/api/tasks/select', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ categories: cats })});
+          if (r.ok) {
+            const data = await r.json();
+            document.getElementById('taskApplied').textContent = `Applied ${data.applied || 0} tasks`;
+          }
+        } catch {}
+      }
+      loadTasks();
+
+      // WebSocket stream for real-time events
+      const psoSvg = document.getElementById('pso');
+      function drawPSO(data) {
+        if (!data || !Array.isArray(data.teams)) return;
+        const w = 520, h = 280, pad = 20;
+        while (psoSvg.firstChild) psoSvg.removeChild(psoSvg.firstChild);
+        // axes
+        const axis1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        axis1.setAttribute('x1', pad); axis1.setAttribute('y1', h - pad);
+        axis1.setAttribute('x2', w - pad); axis1.setAttribute('y2', h - pad);
+        axis1.setAttribute('stroke', '#eee'); psoSvg.appendChild(axis1);
+        const axis2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        axis2.setAttribute('x1', pad); axis2.setAttribute('y1', pad);
+        axis2.setAttribute('x2', pad); axis2.setAttribute('y2', h - pad);
+        axis2.setAttribute('stroke', '#eee'); psoSvg.appendChild(axis2);
+        const toXY = (x, y) => [pad + (w - 2*pad) * (x ?? 0), pad + (h - 2*pad) * (1 - (y ?? 0))];
+        // teams
+        (data.teams || []).forEach((t, i) => {
+          const [x, y] = toXY(t.center_x, t.center_y);
+          const r = 4 + Math.min(8, (t.workflow_len || 0));
+          const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', r);
+          c.setAttribute('fill', '#3498DB'); c.setAttribute('fill-opacity', '0.6');
+          psoSvg.appendChild(c);
+        });
+        // best
+        const g = data.gbest_team || {};
+        const [gx, gy] = toXY(g.center_x ?? (data.gbest?.coverage ?? 0), g.center_y ?? 0);
+        const bc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        bc.setAttribute('cx', gx); bc.setAttribute('cy', gy); bc.setAttribute('r', 8);
+        bc.setAttribute('fill', '#E74C3C'); psoSvg.appendChild(bc);
+        const bt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        bt.setAttribute('x', gx + 10); bt.setAttribute('y', gy);
+        bt.setAttribute('font-size', '12'); bt.setAttribute('fill', '#E74C3C');
+        bt.textContent = 'best'; psoSvg.appendChild(bt);
+        const hint = document.getElementById('psoHint');
+        if (hint) hint.textContent = '';
+      }
+      function connectWS() {
+        try {
+          const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+          const ws = new WebSocket(`${proto}://${location.host}/ws/stream`);
+          const out = document.getElementById('stream');
+          ws.onmessage = (ev) => {
+            try {
+              const msg = JSON.parse(ev.data);
+              // Update relevant panes for known types
+              if (msg.type === 'agent_state') {
+                load();
+              } else if (msg.type === 'progress' || msg.type === 'thought' || msg.type === 'metrics') {
+                load();
+              }
+              if (msg.type === 'progress' && msg.data && msg.data.type === 'synthesis_iteration') {
+                drawPSO(msg.data)
+              }
+              const line = typeof msg === 'string' ? msg : JSON.stringify(msg);
+              out.textContent = (out.textContent + '\n' + line).split('\n').slice(-200).join('\n');
+            } catch {
+              out.textContent = (out.textContent + '\n' + ev.data).split('\n').slice(-200).join('\n');
+            }
+          };
+          ws.onclose = () => {
+            setTimeout(connectWS, 2000);
+          };
+        } catch (e) {
+          console.error('WS error', e);
+          setTimeout(connectWS, 5000);
+        }
+      }
+      connectWS();
+    </script>
+  </body>
+</html>

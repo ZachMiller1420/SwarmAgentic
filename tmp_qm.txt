@@ -1,0 +1,149 @@
+        """Get summary of expected discoveries"""
+        summary = {}
+        
+        for pattern_name, discovery in self.expected_discoveries.items():
+            summary[pattern_name] = {
+                'probability': discovery.probability,
+                'confidence_interval': discovery.confidence_interval,
+                'context_requirements': discovery.context_requirements,
+                'last_occurrence': discovery.last_occurrence.isoformat() if discovery.last_occurrence else None,
+                'discovery_conditions': discovery.discovery_conditions
+            }
+        
+        return summary
+    
+    def get_comprehensive_metrics(self) -> Dict[str, Any]:
+        """Get all metrics in a comprehensive summary"""
+        return {
+            'accuracy_metrics': {
+                'current': self.current_accuracy,
+                'average': self.get_average_accuracy(),
+                'trend': self.get_accuracy_trend(20),
+                'quality_trend': self.quality_trend
+            },
+            'confidence_metrics': {
+                'current': self.current_confidence,
+                'average': self.get_average_confidence(),
+                'trend': self.get_confidence_trend(20)
+            },
+            'performance_metrics': {
+                'average_response_time': self.average_response_time,
+                'response_time_trend': list(self.response_time_window)[-20:] if len(self.response_time_window) >= 20 else list(self.response_time_window)
+            },
+            'source_quality': self.get_source_quality_summary(),
+            'expected_discoveries': self.get_expected_discoveries_summary(),
+            'custom_metrics': {
+                name: {
+                    'current': values[-1] if values else 0.0,
+                    'average': np.mean(list(values)) if values else 0.0,
+                    'trend': list(values)[-10:] if len(values) >= 10 else list(values)
+                }
+                for name, values in self.quality_metrics.items()
+            },
+            'monitoring_status': {
+                'is_active': self.is_monitoring,
+                'window_size': self.window_size,
+                'total_measurements': len(self.accuracy_window),
+                'last_update': datetime.now().isoformat()
+            }
+        }
+    
+    def start_monitoring(self, update_interval: float = 1.0):
+        """Start continuous monitoring"""
+        if self.is_monitoring:
+            return
+        
+        self.is_monitoring = True
+        
+        def monitoring_loop():
+            while self.is_monitoring:
+                try:
+                    # Simulate some metric updates (in real implementation, these would come from actual measurements)
+                    self._simulate_metric_updates()
+                    # Notify any registered update callbacks (e.g., WebSocket streamer)
+                    try:
+                        for cb in list(self.update_callbacks):
+                            try:
+                                cb()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    time.sleep(update_interval)
+                except Exception as e:
+                    self.logger.error(f"Monitoring error: {e}")
+        
+        self.monitoring_thread = threading.Thread(target=monitoring_loop, daemon=True)
+        self.monitoring_thread.start()
+        self.logger.info("Started quality metrics monitoring")
+    
+    def stop_monitoring(self):
+        """Stop continuous monitoring"""
+        self.is_monitoring = False
+        if self.monitoring_thread and self.monitoring_thread.is_alive():
+            self.monitoring_thread.join(timeout=2.0)
+        self.logger.info("Stopped quality metrics monitoring")
+    
+    def _simulate_metric_updates(self):
+        """Simulate metric updates for demonstration (remove in production)"""
+        # This would be replaced with actual metric collection in a real system
+        
+        # Simulate accuracy fluctuation
+        base_accuracy = 0.85
+        accuracy_noise = np.random.normal(0, 0.05)
+        simulated_accuracy = max(0.0, min(1.0, base_accuracy + accuracy_noise))
+        
+        # Simulate confidence fluctuation
+        base_confidence = 0.80
+        confidence_noise = np.random.normal(0, 0.08)
+        simulated_confidence = max(0.0, min(1.0, base_confidence + confidence_noise))
+        
+        # Simulate response time
+        base_response_time = 0.5
+        time_noise = np.random.exponential(0.2)
+        simulated_response_time = base_response_time + time_noise
+        
+        # Record simulated metrics
+        self.record_accuracy(simulated_accuracy, "simulation")
+        self.record_confidence(simulated_confidence, "swarm optimization agent collaboration")
+        self.record_response_time(simulated_response_time)
+        
+        # Update source freshness
+        for source in self.source_qualities.values():
+            # Simulate gradual freshness decay
+            decay_rate = 0.001
+            source.freshness_score = max(0.5, source.freshness_score - decay_rate)
+    
+    def export_metrics(self, filepath: str):
+        """Export all metrics to a JSON file"""
+        metrics_data = self.get_comprehensive_metrics()
+        
+        try:
+            with open(filepath, 'w') as f:
+                json.dump(metrics_data, f, indent=2, default=str)
+            self.logger.info(f"Metrics exported to {filepath}")
+        except Exception as e:
+            self.logger.error(f"Failed to export metrics: {e}")
+    
+    def reset_metrics(self):
+        """Reset all collected metrics"""
+        self.accuracy_window.clear()
+        self.confidence_window.clear()
+        self.response_time_window.clear()
+        self.quality_metrics.clear()
+        
+        self.current_accuracy = 0.0
+        self.current_confidence = 0.0
+        self.average_response_time = 0.0
+        self.quality_trend = "stable"
+        
+        # Reset source qualities
+        for source in self.source_qualities.values():
+            source.accuracy_history.clear()
+            source.validation_count = 0
+        
+        # Reset discovery occurrences
+        for discovery in self.expected_discoveries.values():
+            discovery.last_occurrence = None
+        
+        self.logger.info("All metrics reset")

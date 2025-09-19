@@ -52,19 +52,22 @@ class BERTReasoningEngine:
         self._initialize_model()
     
     def _initialize_model(self):
-        """Initialize BERT model and tokenizer"""
+        """Initialize BERT model and tokenizer (configurable)."""
         try:
-            self.logger.info(f"Loading BERT model from {self.model_path}")
+            import os
+            # Prefer env override, then provided model_path, fallback to bert-base-uncased
+            model_id = os.environ.get("BERT_MODEL_ID") or str(self.model_path or "bert-base-uncased")
+            self.logger.info(f"Loading BERT models from: {model_id}")
             
             # Load tokenizer
-            self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+            self.tokenizer = BertTokenizer.from_pretrained(model_id)
             
             # Load model for sequence classification and base model for embeddings
             self.classification_model = BertForSequenceClassification.from_pretrained(
-                "bert-base-uncased", 
+                model_id, 
                 num_labels=2
             )
-            self.base_model = BertModel.from_pretrained("bert-base-uncased")
+            self.base_model = BertModel.from_pretrained(model_id)
             
             # Move models to device
             self.classification_model.to(self.device)
@@ -78,7 +81,21 @@ class BERTReasoningEngine:
             
         except Exception as e:
             self.logger.error(f"Failed to initialize BERT model: {e}")
-            raise
+            # Fallback to bert-base-uncased if a custom model id fails
+            try:
+                self.logger.info("Falling back to 'bert-base-uncased'")
+                self.tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+                self.classification_model = BertForSequenceClassification.from_pretrained(
+                    "bert-base-uncased", num_labels=2
+                )
+                self.base_model = BertModel.from_pretrained("bert-base-uncased")
+                self.classification_model.to(self.device)
+                self.base_model.to(self.device)
+                self.classification_model.eval()
+                self.base_model.eval()
+            except Exception as e2:
+                self.logger.error(f"Fallback model load failed: {e2}")
+                raise
     
     def encode_text(self, text: str) -> Dict[str, torch.Tensor]:
         """Encode text using BERT tokenizer"""

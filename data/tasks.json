@@ -1,0 +1,16 @@
+{
+  "General": [
+    "plan tasks, execute plan, verify results",
+    "coordinator assigns tasks and verifier checks outputs",
+    "researcher gathers info, planner decomposes, executor runs"
+  ],
+  "Software Delivery": [
+    "collect requirements, plan sprints, implement features, write tests, code review, verify release",
+    "triage bugs, reproduce issues, implement fixes, add regression tests, verify patch",
+    "design system architecture, define interfaces, implement modules, integrate, validate"
+  ],
+  "Research": [
+    "literature review, summarize findings, define hypotheses, design experiments, analyze results, verify conclusions",
+    "collect datasets, clean and preprocess, train models, evaluate metrics, document results, peer review"
+  ]
+}

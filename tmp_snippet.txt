@@ -1,0 +1,61 @@
+                agent.vy *= -1
+                
+            agent.x = np.clip(agent.x, 0.05, 0.95)
+            agent.y = np.clip(agent.y, 0.05, 0.95)
+            
+    def _update_pso_optimization(self):
+        """Update particles for PSO optimization demonstration"""
+        # Update global best
+        for particle in self.particles:
+            if particle.fitness < self.global_best_fitness:
+                self.global_best_fitness = particle.fitness
+                self.global_best_position = particle.position.copy()
+                
+        # Update particles
+        for particle in self.particles:
+            # PSO velocity update
+            w = 0.7  # inertia weight
+            c1, c2 = 2.0, 2.0  # acceleration coefficients
+            r1, r2 = np.random.random(2), np.random.random(2)
+            
+            particle.velocity = (w * particle.velocity + 
+                               c1 * r1 * (particle.best_position - particle.position) +
+                               c2 * r2 * (self.global_best_position - particle.position))
+            
+            # Update position
+            particle.position += particle.velocity * 0.01
+            
+            # Boundary conditions
+            particle.position = np.clip(particle.position, 0.05, 0.95)
+            
+            # Update fitness
+            particle.fitness = self._fitness_function(particle.position)
+            
+            # Update personal best
+            if particle.fitness < particle.best_fitness:
+                particle.best_fitness = particle.fitness
+                particle.best_position = particle.position.copy()
+                
+    def _update_agent_collaboration(self):
+        """Update agents for collaboration demonstration"""
+        # Agents form task-specific groups and collaborate
+        coordinators = [a for a in self.agents if a.role == "coordinator"]
+        workers = [a for a in self.agents if a.role == "worker"]
+        
+        # Coordinators attract workers for task assignment
+        for coordinator in coordinators:
+            for worker in workers:
+                dx = coordinator.x - worker.x
+                dy = coordinator.y - worker.y
+                distance = math.sqrt(dx**2 + dy**2)
+                
+                if distance > 0.1:  # Attraction force
+                    force = 0.001 / (distance + 0.01)
+                    worker.vx += force * dx / distance
+                    worker.vy += force * dy / distance
+                    
+        # Update positions
+        for agent in self.agents:
+            agent.x += agent.vx
+            agent.y += agent.vy
+            

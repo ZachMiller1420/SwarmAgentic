@@ -75,6 +75,7 @@ class AIAgentDemonstrationApp:
         return {
             "bert_model_path": "bert-base-uncased-mrpc/bert-base-uncased-mrpc/huggingface_Intel_bert-base-uncased-mrpc_v1",
             "academic_paper_path": "academic_summary.md",
+            "training_text_path": "data/agent_ops_handbook.txt",
             "max_sequence_length": 512,
             "quality_metrics_window": 1000,
             "enable_real_time_monitoring": True,
@@ -86,6 +87,21 @@ class AIAgentDemonstrationApp:
         """Initialize all system components"""
         try:
             self.logger.info("Initializing system components...")
+            # Setup OpenAI connectivity from local key file (if present) and enable LLM PSO
+            try:
+                key_path = Path("OpenAI-APIkey.txt")
+                if not os.environ.get("OPENAI_API_KEY") and key_path.exists():
+                    api_key = key_path.read_text(encoding="utf-8").strip()
+                    # take first non-empty line
+                    api_key = next((line.strip() for line in api_key.splitlines() if line.strip()), "")
+                    if api_key:
+                        os.environ["OPENAI_API_KEY"] = api_key
+                        self.logger.info("OpenAI API key loaded from OpenAI-APIkey.txt")
+                # Optionally allow switching model/base via env outside code
+                # Enable LLM-guided mutations for text PSO
+                os.environ.setdefault("USE_LLM_PSO", "1")
+            except Exception as e:
+                self.logger.warning(f"OpenAI key setup skipped: {e}")
             
             # Initialize quality metrics collector
             self.quality_metrics = RealTimeMetricsCollector(
@@ -97,6 +113,18 @@ class AIAgentDemonstrationApp:
                 bert_model_path=self.config["bert_model_path"],
                 academic_paper_path=self.config["academic_paper_path"]
             )
+
+            # Prefer custom domain training text if present
+            try:
+                tpath = Path(self.config.get("training_text_path", "")).resolve()
+                if tpath and tpath.exists():
+                    text = tpath.read_text(encoding="utf-8")
+                    self.ai_agent.set_training_text(text)
+                    self.logger.info(f"Loaded custom training text from {tpath}")
+                else:
+                    self.logger.info("Custom training text not found; using default academic paper")
+            except Exception as e:
+                self.logger.warning(f"Unable to load custom training text: {e}")
             
             # Initialize learning system
             self.learning_system = AdaptiveLearningSystem(

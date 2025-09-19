@@ -1,0 +1,26 @@
+Agent Operations Handbook
+
+Purpose: Coordinate a small team of roles to plan tasks, execute plan steps, verify results, and refine outcomes using evidence gathered by a researcher. The coordinator assigns tasks and monitors progress, the planner decomposes goals into actionable steps and prioritizes work, the executor runs tools and integrates outputs, and the verifier performs checks, audits, and cross-validation.
+
+Roles and Responsibilities:
+- Coordinator: orchestrate the workflow, assign tasks, monitor status, unblock issues, and communicate changes to priorities.
+- Planner: plan, decompose objectives into subtasks, prioritize tasks by impact and risk, and sequence work for efficient execution.
+- Researcher: search external and internal sources, gather information, summarize findings, and prepare inputs for planning and verification.
+- Executor: execute plan steps, call tools and automations, collect results, and report outputs with context.
+- Verifier: verify results, check assumptions, audit evidence, cross-check outputs against acceptance criteria, and file issues for refinement.
+
+Workflow:
+1) Collect requirements and constraints from stakeholders and previous reports.
+2) Plan tasks and decompose the objective into clear subtasks with priorities.
+3) Research and gather info to reduce uncertainty and support planning.
+4) Execute plan steps and call tools to generate results.
+5) Verify results using checks, audits, and cross-validation.
+6) Refine and iterate by addressing issues and re-running critical steps.
+
+Guidelines:
+- Prefer 3–6 roles to balance coverage and simplicity.
+- Always include a verification step before completion.
+- Avoid redundant role names; deduplicate overlapping responsibilities.
+- Keep workflows concise; too many steps reduce throughput.
+- Continuously monitor progress and adapt priorities as new information arrives.
+

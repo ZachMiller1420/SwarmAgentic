@@ -196,6 +196,15 @@ python test_animated_demo.py
 - Control panel integration
 - Progress monitoring
 
+#### 7. Text PSO Synthesis (rule-based, new) (`src/synthesis/`)
+- Minimal PSO loop that evolves agent-system specs (roles + workflow) without external LLMs
+- Files:
+  - `src/synthesis/agent_spec.py`: schema for roles and workflow
+  - `src/synthesis/eval.py`: heuristic fitness (coverage, verification, balance)
+  - `src/synthesis/pso_text.py`: `PSOSwarmSynthesizer` running a small population over iterations
+- Demo integration: a new scenario “Agent Synthesis via PSO (Rule-based)” runs this loop and shows the best system
+- Note: This bridges to the paper’s idea. Full language-driven PSO with prompt-based mutations is out of scope here.
+
 ## Configuration
 
 ### Application Settings
@@ -230,6 +239,7 @@ config = {
 - **Metric Export**: Automatic export of session results
 - **Real-time Monitoring**: Continuous quality assessment
 - **Performance Tuning**: Adjust learning parameters
+- **Agent Synthesis Demo (new)**: Run a compact PSO loop that evolves an agent-system spec and prints the best roles/workflow during the demo
 
 ## Troubleshooting
 
@@ -312,3 +322,7 @@ For support and questions:
 - Academic content: SwarmAgentic research paper
 - GUI framework: tkinter with matplotlib integration
 - Machine learning: PyTorch and Transformers libraries
+### Text PSO Synthesis Configuration (optional)
+- Env `USE_LLM_PSO=1`: Enables LLM-driven mutations in the text-based PSO agent synthesis.
+- Env `OPENAI_API_KEY`: Required if `USE_LLM_PSO=1`. Optionally set `OPENAI_MODEL` (default `gpt-4o-mini`) and `OPENAI_BASE_URL` for compatible endpoints.
+- When enabled, the "Agent Synthesis" step runs a small PSO over agent specs and the visualization switches to a real population view (mode `text_pso`).

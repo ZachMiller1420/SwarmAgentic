@@ -62,7 +62,34 @@ class SwarmVisualization:
         self.max_particles = 15
         
         # Visualization modes
-        self.current_mode = "swarm_formation"  # swarm_formation, pso_optimization, agent_collaboration
+        # swarm_formation, pso_optimization, agent_collaboration, emergent_behavior, text_pso, team_builder
+        # Default to team_builder so the central chart starts focused on teams
+        self.current_mode = "team_builder"
+
+        # Text PSO population state (for real agent-spec PSO)
+        self.text_pso_population = []  # current population (target state)
+        self.text_pso_gbest = {"x": 0.5, "y": 0.5, "fitness": 0.0}
+        # Previous state for tweening
+        self.text_pso_prev_population = []
+        self.text_pso_prev_gbest = {"x": 0.5, "y": 0.5, "fitness": 0.0}
+        # Rendered (interpolated) state
+        self.text_pso_render_population = []
+        self.text_pso_render_gbest = {"x": 0.5, "y": 0.5, "fitness": 0.0}
+        # Tween control
+        self.text_pso_tween_steps = 0
+        self.text_pso_tween_max = 20
+        # Global best trail (for visualizing improvement path)
+        self.text_pso_gbest_trail = []  # list of (x, y)
+        self.text_pso_gbest_trail_max = 30
+
+        # Team Builder state (clusters of role-colored particles per team)
+        self.team_builder_teams: List[Dict[str, Any]] = []  # each: roles[], center_x, center_y, fitness
+        self.team_builder_gbest: Dict[str, Any] = {"center_x": 0.5, "center_y": 0.5, "fitness": 0.0, "roles": []}
+        # Team Builder tweening state
+        self.team_builder_prev_teams: List[Dict[str, Any]] = []
+        self.team_builder_render_teams: List[Dict[str, Any]] = []
+        self.team_builder_tween_steps: int = 0
+        self.team_builder_tween_max: int = 20
         
         self._setup_visualization()
         self._initialize_agents()
@@ -85,7 +112,7 @@ class SwarmVisualization:
         
         self.mode_var = tk.StringVar(value=self.current_mode)
         mode_combo = ttk.Combobox(self.control_frame, textvariable=self.mode_var, 
-                                 values=["swarm_formation", "pso_optimization", "agent_collaboration", "emergent_behavior"],
+                                 values=["team_builder"],
                                  state="readonly", width=20)
         mode_combo.pack(side=tk.LEFT, padx=5)
         mode_combo.bind('<<ComboboxSelected>>', self._on_mode_change)
@@ -113,6 +140,8 @@ class SwarmVisualization:
         # Create matplotlib figure
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
         self.fig.patch.set_facecolor('white')
+        # Keep a handle to a single colorbar to avoid stacking multiples
+        self._text_pso_colorbar = None
         
         # Setup the plot
         self.ax.set_xlim(0, 1)
@@ -137,18 +166,25 @@ class SwarmVisualization:
     def _setup_legend(self):
         """Setup legend for different visualization elements"""
         legend_elements = [
-            plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label='Coordinator Agent'),
-            plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=8, label='Worker Agent'),
-            plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='red', markersize=8, label='Specialist Agent'),
-            plt.Line2D([0], [0], marker='s', color='w', markerfacecolor='purple', markersize=8, label='PSO Particle'),
-            plt.Line2D([0], [0], color='orange', linewidth=2, label='Communication'),
-            plt.Line2D([0], [0], color='cyan', linewidth=2, label='Optimization Path')
+            # Team Builder (role colors)
+            plt.Line2D([0], [0], marker='o', color='w', markeredgecolor='black', markerfacecolor='royalblue', markersize=9, label='Coordinator'),
+            plt.Line2D([0], [0], marker='o', color='w', markeredgecolor='black', markerfacecolor='darkorange', markersize=9, label='Planner'),
+            plt.Line2D([0], [0], marker='o', color='w', markeredgecolor='black', markerfacecolor='seagreen', markersize=9, label='Researcher'),
+            plt.Line2D([0], [0], marker='o', color='w', markeredgecolor='black', markerfacecolor='mediumpurple', markersize=9, label='Executor'),
+            plt.Line2D([0], [0], marker='o', color='w', markeredgecolor='black', markerfacecolor='crimson', markersize=9, label='Verifier'),
+            plt.Line2D([0], [0], marker='o', color='w', markeredgecolor='black', markerfacecolor='saddlebrown', markersize=9, label='Critic'),
+            plt.Line2D([0], [0], marker='o', color='gold', markerfacecolor='none', markersize=10, label='Best Team (gold circle)'),
+            # Other modes
+            plt.Line2D([0], [0], marker='s', color='w', markerfacecolor='purple', markersize=8, label='PSO Particle (numeric)'),
         ]
         self.ax.legend(handles=legend_elements, loc='upper right', bbox_to_anchor=(1, 1))
         
     def _initialize_agents(self):
         """Initialize the swarm agents with different roles"""
         self.agents.clear()
+        # Start empty for team/text PSO; only spawn agents for other demos
+        if self.current_mode in ("team_builder", "text_pso"):
+            return
         
         # Agent roles and their properties
         agent_types = [
@@ -178,6 +214,9 @@ class SwarmVisualization:
     def _initialize_particles(self):
         """Initialize PSO particles for optimization visualization"""
         self.particles.clear()
+        # Start empty for team/text PSO; only spawn numeric particles for numeric PSO demo
+        if self.current_mode in ("team_builder", "text_pso"):
+            return
         
         for i in range(self.max_particles):
             position = np.random.uniform(0.1, 0.9, 2)
@@ -251,6 +290,65 @@ class SwarmVisualization:
             self._update_agent_collaboration()
         elif self.current_mode == "emergent_behavior":
             self._update_emergent_behavior()
+        elif self.current_mode == "text_pso":
+            # Animate interpolation between last and current population states
+            if self.text_pso_tween_steps > 0 and self.text_pso_population:
+                t = self.text_pso_tween_steps / max(1, self.text_pso_tween_max)
+                alpha = 1.0 - t
+                # Interpolate population by index
+                render = []
+                n = min(len(self.text_pso_population), len(self.text_pso_prev_population) or len(self.text_pso_population))
+                for i in range(n):
+                    cur = self.text_pso_population[i]
+                    prev = self.text_pso_prev_population[i] if i < len(self.text_pso_prev_population) else cur
+                    render.append({
+                        'x': float(prev.get('x',0))*(1-alpha) + float(cur.get('x',0))*alpha,
+                        'y': float(prev.get('y',0))*(1-alpha) + float(cur.get('y',0))*alpha,
+                        'fitness': float(prev.get('fitness',0))*(1-alpha) + float(cur.get('fitness',0))*alpha,
+                        'size': float(prev.get('size',1))*(1-alpha) + float(cur.get('size',1))*alpha,
+                    })
+                # If sizes differ, append remaining as current
+                for j in range(n, len(self.text_pso_population)):
+                    render.append(self.text_pso_population[j])
+                self.text_pso_render_population = render
+                # Interpolate gbest
+                pg = self.text_pso_prev_gbest or {"x":0.5,"y":0.5,"fitness":0.0}
+                cg = self.text_pso_gbest or {"x":0.5,"y":0.5,"fitness":0.0}
+                self.text_pso_render_gbest = {
+                    'x': float(pg.get('x',0))*(1-alpha) + float(cg.get('x',0))*alpha,
+                    'y': float(pg.get('y',0))*(1-alpha) + float(cg.get('y',0))*alpha,
+                    'fitness': float(pg.get('fitness',0))*(1-alpha) + float(cg.get('fitness',0))*alpha,
+                }
+                self.text_pso_tween_steps -= 1
+            else:
+                # Use current state as render state
+                self.text_pso_render_population = list(self.text_pso_population)
+                self.text_pso_render_gbest = dict(self.text_pso_gbest)
+        elif self.current_mode == "team_builder":
+            # Animate team cluster centers and growth
+            if self.team_builder_tween_steps > 0 and self.team_builder_teams:
+                t = self.team_builder_tween_steps / max(1, self.team_builder_tween_max)
+                alpha = 1.0 - t
+                render = []
+                n = max(len(self.team_builder_teams), len(self.team_builder_prev_teams))
+                for i in range(n):
+                    cur = self.team_builder_teams[i] if i < len(self.team_builder_teams) else (self.team_builder_prev_teams[-1] if self.team_builder_prev_teams else None)
+                    prev = self.team_builder_prev_teams[i] if i < len(self.team_builder_prev_teams) else cur
+                    if not cur:
+                        continue
+                    px = float(prev.get('center_x', cur.get('center_x', 0.5))) if prev else float(cur.get('center_x', 0.5))
+                    py = float(prev.get('center_y', cur.get('center_y', 0.5))) if prev else float(cur.get('center_y', 0.5))
+                    cx = float(cur.get('center_x', 0.5))
+                    cy = float(cur.get('center_y', 0.5))
+                    rx = px * (1 - alpha) + cx * alpha
+                    ry = py * (1 - alpha) + cy * alpha
+                    fit = float(cur.get('fitness', 0.0))
+                    roles = cur.get('roles', [])
+                    render.append({'center_x': rx, 'center_y': ry, 'fitness': fit, 'roles': roles, 'grow': alpha})
+                self.team_builder_render_teams = render
+                self.team_builder_tween_steps -= 1
+            else:
+                self.team_builder_render_teams = list(self.team_builder_teams)
             
     def _update_swarm_formation(self):
         """Update agents for swarm formation demonstration"""
@@ -468,13 +566,7 @@ class SwarmVisualization:
         self.ax.grid(True, alpha=0.3)
         
         # Update title based on mode
-        titles = {
-            "swarm_formation": "SwarmAgentic: Agent Formation & Flocking Behavior",
-            "pso_optimization": "SwarmAgentic: PSO-Based Optimization Process",
-            "agent_collaboration": "SwarmAgentic: Multi-Agent Collaboration",
-            "emergent_behavior": "SwarmAgentic: Emergent Collective Intelligence"
-        }
-        self.ax.set_title(titles.get(self.current_mode, "SwarmAgentic Demonstration"), 
+        self.ax.set_title("SwarmAgentic: Team Builder (Role-Colored PSO)", 
                          fontsize=14, fontweight='bold')
         
         # Draw agents
@@ -502,10 +594,130 @@ class SwarmVisualization:
             # Draw global best
             self.ax.scatter(self.global_best_position[0], self.global_best_position[1], 
                           s=200, c='gold', marker='*', edgecolors='black', linewidth=2)
+
+        # Draw population for text-based PSO mode
+        if self.current_mode == "text_pso" and (self.text_pso_render_population or self.text_pso_population):
+            pop = self.text_pso_render_population or self.text_pso_population
+            xs = [p.get("x",0.0) for p in pop]
+            ys = [p.get("y",0.0) for p in pop]
+            sizes = [max(40, 30 + 20 * p.get("size", 1)) for p in pop]
+            colors = [p.get("fitness", 0.0) for p in pop]
+
+            # Auto-zoom to population bounding box with padding
+            if xs and ys:
+                pad = 0.08
+                xmin, xmax = max(0.0, min(xs) - pad), min(1.0, max(xs) + pad)
+                ymin, ymax = max(0.0, min(ys) - pad), min(1.0, max(ys) + pad)
+                if abs(xmax - xmin) < 0.2:
+                    cx = 0.5 * (xmin + xmax)
+                    xmin, xmax = max(0.0, cx - 0.1), min(1.0, cx + 0.1)
+                if abs(ymax - ymin) < 0.2:
+                    cy = 0.5 * (ymin + ymax)
+                    ymin, ymax = max(0.0, cy - 0.1), min(1.0, cy + 0.1)
+                self.ax.set_xlim(xmin, xmax)
+                self.ax.set_ylim(ymin, ymax)
+
+            scatter = self.ax.scatter(xs, ys, s=sizes, c=colors, cmap='viridis', vmin=0.0, vmax=1.0, alpha=0.8)
+            # Colorbar: create once and then update to prevent layout shrink
+            if self._text_pso_colorbar is None:
+                self._text_pso_colorbar = self.fig.colorbar(scatter, ax=self.ax, fraction=0.046, pad=0.04, label='Fitness')
+            else:
+                try:
+                    self._text_pso_colorbar.update_normal(scatter)
+                except Exception:
+                    pass
+            # Delta arrows from previous -> current
+            if self.text_pso_prev_population and self.text_pso_population:
+                n = min(len(self.text_pso_prev_population), len(self.text_pso_population))
+                for i in range(n):
+                    prev = self.text_pso_prev_population[i]
+                    cur = self.text_pso_population[i]
+                    px, py = float(prev.get('x', 0.0)), float(prev.get('y', 0.0))
+                    cx, cy = float(cur.get('x', 0.0)), float(cur.get('y', 0.0))
+                    dx, dy = (cx - px), (cy - py)
+                    if abs(dx) + abs(dy) > 1e-4:
+                        try:
+                            self.ax.arrow(px, py, dx, dy, head_width=0.01, head_length=0.02, fc='gray', ec='gray', alpha=0.35, length_includes_head=True)
+                        except Exception:
+                            self.ax.plot([px, cx], [py, cy], color='gray', alpha=0.35, linewidth=1)
+            # Draw gbest
+            gx = (self.text_pso_render_gbest or self.text_pso_gbest).get("x", 0.5)
+            gy = (self.text_pso_render_gbest or self.text_pso_gbest).get("y", 0.5)
+            self.ax.scatter(gx, gy,
+                            s=220, c='gold', marker='*', edgecolors='black', linewidth=2)
+            # Annotate best fitness
+            bf = (self.text_pso_render_gbest or self.text_pso_gbest).get("fitness", 0.0)
+            self.ax.text(0.02, 0.98, f"Best fitness: {bf:.2f}", transform=self.ax.transAxes,
+                         fontsize=10, verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+
+        # Draw Team Builder mode: clusters per team, role-colored particles
+        if self.current_mode == "team_builder" and (self.team_builder_render_teams or self.team_builder_teams):
+            # Auto-zoom around teams
+            teams_to_draw = self.team_builder_render_teams or self.team_builder_teams
+            xs = [float(t.get('center_x', 0.5)) for t in teams_to_draw]
+            ys = [float(t.get('center_y', 0.5)) for t in teams_to_draw]
+            if xs and ys:
+                pad = 0.08
+                xmin, xmax = max(0.0, min(xs) - pad), min(1.0, max(xs) + pad)
+                ymin, ymax = max(0.0, min(ys) - pad), min(1.0, max(ys) + pad)
+                if abs(xmax - xmin) < 0.2:
+                    cx = 0.5 * (xmin + xmax)
+                    xmin, xmax = max(0.0, cx - 0.1), min(1.0, cx + 0.1)
+                if abs(ymax - ymin) < 0.2:
+                    cy = 0.5 * (ymin + ymax)
+                    ymin, ymax = max(0.0, cy - 0.1), min(1.0, cy + 0.1)
+                self.ax.set_xlim(xmin, xmax)
+                self.ax.set_ylim(ymin, ymax)
+
+            # Role color mapping
+            role_colors = {
+                'coordinator': 'royalblue',
+                'planner': 'darkorange',
+                'researcher': 'seagreen',
+                'executor': 'mediumpurple',
+                'verifier': 'crimson',
+                'critic': 'saddlebrown',
+            }
             
-        # Update legend
+            for team in teams_to_draw:
+                cx = float(team.get('center_x', 0.5))
+                cy = float(team.get('center_y', 0.5))
+                roles = team.get('roles', []) or []
+                n = max(1, len(roles))
+                # Arrange role particles around the center in a small circle
+                target_radius = 0.03 + 0.005 * n
+                grow = float(team.get('grow', 1.0))
+                radius = max(0.0, min(1.0, grow)) * target_radius
+                for idx, role in enumerate(roles):
+                    angle = 2 * math.pi * (idx / n)
+                    rx = cx + radius * math.cos(angle)
+                    ry = cy + radius * math.sin(angle)
+                    color = role_colors.get(str(role).lower(), 'gray')
+                    self.ax.scatter(rx, ry, s=120, c=color, alpha=0.3 + 0.6*grow, edgecolors='black', linewidth=0.5)
+                # Draw a faint circle for the team boundary, colored by fitness
+                fit = float(team.get('fitness', 0.0))
+                circle = plt.Circle((cx, cy), radius + 0.01, color='gray', fill=False, alpha=0.2 + 0.3*fit, linewidth=2)
+                self.ax.add_patch(circle)
+
+            # Highlight the global best team cluster
+            gb = self.team_builder_gbest or {}
+            gx = float(gb.get('center_x', 0.5))
+            gy = float(gb.get('center_y', 0.5))
+            gr = 0.03 + 0.005 * max(1, int(len(gb.get('roles', [])))) + 0.02
+            best_circle = plt.Circle((gx, gy), gr, color='gold', fill=False, linewidth=3)
+            self.ax.add_patch(best_circle)
+            bf = float(gb.get('fitness', 0.0))
+            self.ax.text(gx, gy + gr + 0.02, f"Best: {bf:.2f}", ha='center', fontsize=10, bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+            # Draw gbest trail
+            if self.text_pso_gbest_trail:
+                tx = [p[0] for p in self.text_pso_gbest_trail]
+                ty = [p[1] for p in self.text_pso_gbest_trail]
+                self.ax.plot(tx, ty, color='gold', alpha=0.5, linewidth=2, linestyle='--')
+                self.ax.scatter(tx, ty, s=20, c='gold', alpha=0.6)
+            
+        # Re-add legend each frame (axes are cleared above)
         self._setup_legend()
-        
+
         # Refresh canvas
         self.canvas.draw()
         
@@ -526,14 +738,9 @@ class SwarmVisualization:
         # This method can be called from the main application to sync
         # the visualization with the actual AI agent's state
         
-        if agent_state.get('is_training', False):
-            self.current_mode = "pso_optimization"
-            self.mode_var.set(self.current_mode)
-            if not self.is_running:
-                self.start_animation()
-                
-        elif agent_state.get('is_demonstrating', False):
-            self.current_mode = "agent_collaboration"
+        # Always prefer team_builder visualization
+        if agent_state.get('is_training', False) or agent_state.get('is_demonstrating', False) or agent_state.get('text_pso_mode', False) or agent_state.get('team_builder_mode', False):
+            self.current_mode = "team_builder"
             self.mode_var.set(self.current_mode)
             if not self.is_running:
                 self.start_animation()
@@ -547,3 +754,59 @@ class SwarmVisualization:
             'agent_count': len(self.agents),
             'particle_count': len(self.particles)
         }
+
+    def update_text_pso_state(self, iteration: int, population_metrics: List[Dict[str, Any]], gbest: Dict[str, Any]):
+        """Receive external updates for text-based PSO population and redraw."""
+        # population_metrics items expected keys: coverage (0..1), role_count, workflow_len, fitness (0..1)
+        # Preserve previous state for interpolation
+        self.text_pso_prev_population = list(self.text_pso_population) if self.text_pso_population else []
+        self.text_pso_population = []
+        for pm in population_metrics:
+            x = float(pm.get('coverage', 0.0))
+            wf = int(pm.get('workflow_len', 0))
+            y = min(1.0, max(0.0, wf / 10.0))
+            self.text_pso_population.append({
+                'x': x,
+                'y': y,
+                'fitness': float(pm.get('fitness', 0.0)),
+                'size': int(pm.get('role_count', 1)),
+            })
+        # Previous gbest for interpolation
+        self.text_pso_prev_gbest = dict(self.text_pso_gbest) if self.text_pso_gbest else {"x":0.5,"y":0.5,"fitness":0.0}
+        self.text_pso_gbest = {
+            'x': float(gbest.get('coverage', 0.0)),
+            'y': min(1.0, max(0.0, int(gbest.get('workflow_len', 0)) / 10.0)),
+            'fitness': float(gbest.get('fitness', 0.0)),
+        }
+        # Update gbest trail
+        try:
+            gx, gy = float(self.text_pso_gbest['x']), float(self.text_pso_gbest['y'])
+            if not self.text_pso_gbest_trail or (abs(self.text_pso_gbest_trail[-1][0] - gx) + abs(self.text_pso_gbest_trail[-1][1] - gy) > 1e-6):
+                self.text_pso_gbest_trail.append((gx, gy))
+                if len(self.text_pso_gbest_trail) > self.text_pso_gbest_trail_max:
+                    self.text_pso_gbest_trail = self.text_pso_gbest_trail[-self.text_pso_gbest_trail_max:]
+        except Exception:
+            pass
+        # Start tween animation
+        self.text_pso_tween_steps = self.text_pso_tween_max
+        # Force a redraw immediately
+        self._update_visualization()
+
+    def update_team_builder_state(self, iteration: int, teams: List[Dict[str, Any]], gbest_team: Dict[str, Any]):
+        """Receive updates for Team Builder visualization and redraw."""
+        try:
+            # Preserve previous teams for tweening
+            self.team_builder_prev_teams = list(self.team_builder_teams) if self.team_builder_teams else []
+            self.team_builder_teams = teams or []
+            self.team_builder_gbest = gbest_team or {}
+            # Start tween animation
+            self.team_builder_tween_steps = self.team_builder_tween_max
+            # Switch mode if not already
+            if self.current_mode != 'team_builder':
+                self.current_mode = 'team_builder'
+                self.mode_var.set(self.current_mode)
+                if not self.is_running:
+                    self.start_animation()
+        except Exception:
+            pass
+        self._update_visualization()

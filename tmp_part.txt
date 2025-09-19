@@ -1,0 +1,180 @@
+                "coordinator assigns tasks and verifier checks outputs",
+                "researcher gathers info, planner decomposes, executor runs",
+            ]
+
+            # Provide domain text to evaluator for relevance (optional)
+            try:
+                # Write the training corpus to a cache file for evaluator if we have custom text
+                corpus_text = self._load_academic_paper()
+                if corpus_text:
+                    data_dir = Path("data")
+                    data_dir.mkdir(exist_ok=True)
+                    cache_path = data_dir / "_training_corpus.txt"
+                    if not cache_path.exists() or len(cache_path.read_text(encoding="utf-8", errors="ignore")) != len(corpus_text):
+                        cache_path.write_text(corpus_text, encoding="utf-8")
+                    self.training_corpus_cache_path = cache_path
+                    os.environ["PSO_DOMAIN_TEXT_PATH"] = str(cache_path)
+                    os.environ.setdefault("PSO_DOMAIN_WEIGHT", "0.2")
+            except Exception:
+                pass
+            # notify GUI it can switch to text_pso visualization if supported
+            self._notify_callbacks('state_change', {**asdict(self.state), 'text_pso_mode': True})
+
+            def on_iter(iteration, pop_triplets, gbest):
+                population_metrics = []
+                teams = []
+                for sys, fit, metrics in pop_triplets:
+                    population_metrics.append({
+                        'coverage': float(metrics.get('coverage', 0.0)),
+                        'role_count': len(sys.roles),
+                        'workflow_len': len(sys.workflow),
+                        'fitness': float(fit),
+                    })
+                    # Team payload for visualization: roles + center coordinates
+                    try:
+                        cov = float(metrics.get('coverage', 0.0))
+                        wf_len = int(len(sys.workflow))
+                        team_obj = {
+                            'roles': [r.name for r in sys.roles],
+                            'coverage': cov,
+                            'workflow_len': wf_len,
+                            'fitness': float(fit),
+                            'center_x': cov,
+                            'center_y': min(1.0, max(0.0, wf_len / 10.0)),
+                        }
+                        teams.append(team_obj)
+                    except Exception:
+                        pass
+                gsys, gfit = gbest
+                # We don't have gbest metrics here; approximate from current pop
+                cov = 0.0
+                wf = 0
+                try:
+                    cov = max([m.get('coverage', 0.0) for _, _, m in pop_triplets] or [0.0])
+                    wf = max([len(s.workflow) for s, _, _ in pop_triplets] or [0])
+                except Exception:
+                    pass
+
+                # Prepare Top-K team summaries (include spec text for clarity)
+                try:
+                    k = 5
+                    sorted_pop = sorted(pop_triplets, key=lambda t: float(t[1]), reverse=True)
+                    top_k = []
+                    for s, f, m in sorted_pop[:k]:
+                        top_k.append({
+                            'fitness': float(f),
+                            'coverage': float(m.get('coverage', 0.0)),
+                            'role_count': int(len(s.roles)),
+                            'workflow_len': int(len(s.workflow)),
+                            'spec': s.to_text(),
+                        })
+                except Exception:
+                    top_k = []
+
+                gbest_spec = ''
+                try:
+                    if gsys is not None:
+                        gbest_spec = gsys.to_text()
+                except Exception:
+                    gbest_spec = ''
+
+                # Best team summary (roles + metrics)
+                gbest_team = {}
+                try:
+                    if gsys is not None:
+                        gbest_team = {
+                            'roles': [r.name for r in gsys.roles],
+                            'coverage': float(cov),
+                            'workflow_len': int(len(gsys.workflow) if hasattr(gsys, 'workflow') else 0),
+                            'fitness': float(gfit),
+                            'center_x': float(cov),
+                            'center_y': min(1.0, max(0.0, (len(gsys.workflow) if hasattr(gsys, 'workflow') else 0) / 10.0)),
+                        }
+                except Exception:
+                    gbest_team = {}
+                # LLM stats from synthesizer instance (available in closure)
+                llm_stats = {
+                    'calls_total': int(getattr(synth, 'llm_calls', 0)),
+                    'accepts_total': int(getattr(synth, 'llm_accepts', 0)),
+                    'accepts_this_iter': int(getattr(synth, '_accepted_this_iter', 0)),
+                    'noops_total': int(getattr(synth, 'llm_noops', 0)),
+                }
+
+                # Scratchpad note when LLM proposals were accepted this iteration
+                try:
+                    if llm_stats['accepts_this_iter'] > 0:
+                        self.add_thought(f"LLM mutations accepted this iteration: {llm_stats['accepts_this_iter']}", "synthesis_llm")
+                except Exception:
+                    pass
+
+                self._notify_callbacks('progress', {
+                    'type': 'synthesis_iteration',
+                    'iteration': iteration,
+                    'gbest_fitness': float(gfit),
+                    'population': population_metrics,
+                    'teams': teams,
+                    'gbest_team': gbest_team,
+                    'top_k': top_k,
+                    'gbest_spec': gbest_spec,
+                    'llm_stats': llm_stats,
+                    'gbest': {
+                        'coverage': float(cov),
+                        'workflow_len': int(wf),
+                        'fitness': float(gfit),
+                    }
+                })
+                # Optional pacing so the GUI can show formation in real time
+                try:
+                    pause = float(os.environ.get('TEXT_PSO_PAUSE', '0.35'))
+                except Exception:
+                    pause = 0.35
+                if pause > 0:
+                    time.sleep(pause)
+
+            # Larger population/iterations for more visible motion; configurable via env
+            try:
+                pop = int(os.environ.get('TEXT_PSO_POP', '15'))
+            except Exception:
+                pop = 15
+            try:
+                iters = int(os.environ.get('TEXT_PSO_ITERS', '12'))
+            except Exception:
+                iters = 12
+            synth = PSOSwarmSynthesizer(population_size=pop, iterations=iters, use_llm=use_llm)
+            result = synth.run(tasks, on_iteration=on_iter)
+            self.add_thought(f"PSO synthesis best fitness: {result.best_fitness:.2f}", "synthesis_result")
+        except Exception as e:
+            self.add_thought(f"Synthesis step skipped due to error: {e}", "synthesis_error")
+        
+        demo_scenarios = [
+            "Explain the core principles of SwarmAgentic",
+            "Describe the PSO-based optimization approach",
+            "Analyze the experimental results and their significance",
+            "Discuss the implications for AI system design",
+            "Compare SwarmAgentic with traditional multi-agent systems"
+        ]
+        
+        for i, scenario in enumerate(demo_scenarios):
+            if self.state.is_paused:
+                await self._wait_for_resume()
+            
+            await self._demonstrate_understanding(scenario)
+            
+            progress = (i + 1) / len(demo_scenarios) * 100
+            self.state.demonstration_progress = progress
+            
+            self._notify_callbacks('progress', {
+                'type': 'demonstration',
+                'progress': progress,
+                'current_scenario': scenario
+            })
+            
+            await asyncio.sleep(1.0)
+    
+    async def _demonstrate_understanding(self, query: str):
+        """Demonstrate understanding of a specific query"""
+        self.add_thought(f"Demonstrating understanding of: {query}", "demonstration")
+        
+        # Use BERT reasoning engine
+        reasoning_steps = self.bert_engine.reason_step_by_step(query)
+        
