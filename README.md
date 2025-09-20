@@ -295,6 +295,7 @@ config = {
     "export_results": True
 }
 ```
+docker run --rm -p 8000:8000 -e HF_HOME=/cache/huggingface -e BERT_MODEL_ID=prajjwal1/bert-tiny -v ${PWD}\.cache\huggingface:/cache/huggingface -v ${PWD}\results:/app/results -v ${PWD}\logs:/app/logs swarmagentic-web:latest
 
 ### BERT Model Configuration
 - Default: Intel optimized BERT base uncased MRPC
