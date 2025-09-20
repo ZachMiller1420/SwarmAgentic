@@ -1,3 +1,13 @@
+FROM node:20-bullseye-slim AS frontend-build
+
+WORKDIR /frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.10-slim
 
 ENV PYTHONUNBUFFERED=1 \
@@ -22,6 +32,9 @@ RUN python -m pip install --upgrade pip \
 
 # Copy the project
 COPY . .
+
+# Bring in the compiled React UI
+COPY --from=frontend-build /frontend/dist ./frontend/dist
 
 # Writable cache and outputs
 VOLUME ["/cache/huggingface", "/app/results", "/app/logs"]
